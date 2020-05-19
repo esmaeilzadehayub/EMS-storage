@@ -16,7 +16,7 @@ listall={}
 alldictionary = {}
 polldictionary = {}
 def allDiscovery():
-  discovery=subprocess.Popen(["/opt/Navisphere/bin/naviseccli -User $user  -Password   $password  -h 172.16.61.151  -scope  0  -Xml  getlun      -name   -all  "],stdout=subprocess.PIPE,stderr=subprocess.STDOUT,shell=True)
+  discovery=subprocess.Popen(["/opt/Navisphere/bin/naviseccli -User $user  -Password   $password  -h   -scope  0  -Xml  getlun      -name   -all  "],stdout=subprocess.PIPE,stderr=subprocess.STDOUT,shell=True)
   (out,err) = discovery.communicate();
   p=discovery.returncode
   if p == 0:
@@ -63,7 +63,7 @@ def poll():
           result = {}
           listpollName = []
           listpollID = []
-          command="/opt/Navisphere/bin/naviseccli -User $user  -Password $password -h 172.16.61.151  -scope  0 -Xml   lun  -list -isPoolLUN "
+          command="/opt/Navisphere/bin/naviseccli -User $user  -Password $password -h   -scope  0 -Xml   lun  -list -isPoolLUN "
           result=subprocess.Popen(command,stdout=subprocess.PIPE,stderr=subprocess.STDOUT,shell=True)
           output,error=result.communicate()
           outputXml = ET.fromstring(output)
@@ -92,7 +92,7 @@ def poll():
 def itemPoll():
           idlun=str(sys.argv[2])
           PollItem={}
-          command="/opt/Navisphere/bin/naviseccli -User $user  -Password $password -h 172.16.61.151  -scope  0 -Xml  lun -list -all -l  " + idlun + " "
+          command="/opt/Navisphere/bin/naviseccli -User $user  -Password $password -h   -scope  0 -Xml  lun -list -all -l  " + idlun + " "
           result=subprocess.Popen(command,stdout=subprocess.PIPE,stderr=subprocess.STDOUT,shell=True)
           output,error=result.communicate()
           outputXml = ET.fromstring(output)
@@ -110,7 +110,7 @@ def itemPoll():
 def itemRaid():
           idlun=str(sys.argv[2])
           RaidItem={}
-          command="/opt/Navisphere/bin/naviseccli -User $user  -Password  $password -h 172.16.61.151  -scope  0 -Xml getlun  " + idlun + " "
+          command="/opt/Navisphere/bin/naviseccli -User $user  -Password  $password -h  -scope  0 -Xml getlun  " + idlun + " "
           result=subprocess.Popen(command,stdout=subprocess.PIPE,stderr=subprocess.STDOUT,shell=True)
           output,error=result.communicate()
           outputXml = ET.fromstring(output)
