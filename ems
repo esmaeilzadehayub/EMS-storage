@@ -1,0 +1,142 @@
+import xml.etree.cElementTree as ET
+import sys
+import subprocess
+import os
+import json
+
+user=""
+password = ""
+luntypeRaid=[]
+luntypePoll= []
+listRaid=[]
+listPoll= []
+data=[]
+allName=[]
+listall={}
+alldictionary = {}
+polldictionary = {}
+def allDiscovery():
+  discovery=subprocess.Popen(["/opt/Navisphere/bin/naviseccli -User $user  -Password   $password  -h 172.16.61.151  -scope  0  -Xml  getlun      -name   -all  "],stdout=subprocess.PIPE,stderr=subprocess.STDOUT,shell=True)
+  (out,err) = discovery.communicate();
+  p=discovery.returncode
+  if p == 0:
+         discoveryXml = ET.fromstring(out)
+         state={}
+         for check in discoveryXml.findall("./MESSAGE/SIMPLERSP/METHODRESPONSE/RETURNVALUE/VALUE.NAMEDINSTANCE/INSTANCE/PROPERTY"):
+                val=check.attrib['NAME']
+                for subCheck in check.iter('VALUE'):
+                    result=subCheck.text
+                    state.update({val:result})
+         x=state['errorCode']
+         if x == '0' :
+             for childdic in discoveryXml.findall("./MESSAGE/SIMPLERSP/METHODRESPONSE/PARAMVALUE/VALUE/PARAMVALUE"):
+                    key=childdic.attrib['NAME']
+                    if key == 'LOGICAL UNIT NUMBER':
+                       for subChild in childdic.iter('VALUE'):
+                         value = subChild.text
+                         data.append(value)
+         for child in discoveryXml.findall("./MESSAGE/SIMPLERSP/METHODRESPONSE/PARAMVALUE/VALUE/PARAMVALUE"):
+                          keyname=child.attrib['NAME']
+                          if  'Name' in keyname :
+                             for subChild in child.iter('VALUE'):
+                               namelun = subChild.text
+                               allName.append(namelun)
+
+         alldictionary = dict(zip(data,allName))
+         return  alldictionary
+  else:
+     return err
+
+def raid():
+     allDiscovery()
+     poll()
+     difraid=list(set(data) - set(listPoll))
+     alldictionary = dict(zip(data,allName))
+     for i in difraid :
+         raidName=alldictionary[i]
+         luntypeRaid.append({'{#ID}':i,'{#NAME}':raidName})
+     result = {'data': luntypeRaid}
+     result=json.dumps(result)
+     return  result
+
+def poll():
+          result = {}
+          listpollName = []
+          listpollID = []
+          command="/opt/Navisphere/bin/naviseccli -User $user  -Password $password -h 172.16.61.151  -scope  0 -Xml   lun  -list -isPoolLUN "
+          result=subprocess.Popen(command,stdout=subprocess.PIPE,stderr=subprocess.STDOUT,shell=True)
+          output,error=result.communicate()
+          outputXml = ET.fromstring(output)
+          for child in outputXml.findall("./MESSAGE/SIMPLERSP/METHODRESPONSE/PARAMVALUE/VALUE/PARAMVALUE"):
+               key=child.attrib['NAME']
+               keyasli=str(key)
+               if  'LOGICAL' in keyasli :
+                   for subChild in child.iter('VALUE'):
+                      idLun = subChild.text
+                      listPoll.append(idLun)
+          for child in outputXml.findall("./MESSAGE/SIMPLERSP/METHODRESPONSE/PARAMVALUE/VALUE/PARAMVALUE"):
+                          keyname=child.attrib['NAME']
+                          if  'Name' in keyname :
+                             for subChild in child.iter('VALUE'):
+                               namelun = subChild.text
+                               luntypePoll.append(namelun)
+          polldictionary = dict(zip( listPoll, luntypePoll))
+          for i in listPoll :
+             pollName=polldictionary[i]
+             listpollID.append({'{#ID}':i,'{#NAME}':pollName})
+          result= {'data':listpollID}
+          result=json.dumps(result)
+
+          return result
+
+def itemPoll():
+          idlun=str(sys.argv[2])
+          PollItem={}
+          command="/opt/Navisphere/bin/naviseccli -User $user  -Password $password -h 172.16.61.151  -scope  0 -Xml  lun -list -all -l  " + idlun + " "
+          result=subprocess.Popen(command,stdout=subprocess.PIPE,stderr=subprocess.STDOUT,shell=True)
+          output,error=result.communicate()
+          outputXml = ET.fromstring(output)
+          for child in outputXml.findall("./MESSAGE/SIMPLERSP/METHODRESPONSE/PARAMVALUE/VALUE/PARAMVALUE"):
+               name=child.attrib['NAME']
+               for subChild in child.iter('VALUE'):
+                         value = subChild.text
+                         PollItem.update({name:value})
+          PollItem={'data':PollItem}
+          PollItem=json.dumps(PollItem)
+          return  PollItem
+
+
+
+def itemRaid():
+          idlun=str(sys.argv[2])
+          RaidItem={}
+          command="/opt/Navisphere/bin/naviseccli -User $user  -Password  $password -h 172.16.61.151  -scope  0 -Xml getlun  " + idlun + " "
+          result=subprocess.Popen(command,stdout=subprocess.PIPE,stderr=subprocess.STDOUT,shell=True)
+          output,error=result.communicate()
+          outputXml = ET.fromstring(output)
+          for child in outputXml.findall("./MESSAGE/SIMPLERSP/METHODRESPONSE/PARAMVALUE/VALUE/PARAMVALUE"):
+               name=child.attrib['NAME']
+               for subChild in child.iter('VALUE'):
+                         value = subChild.text
+                         RaidItem.update({name:value})
+          RaidItem={'data':RaidItem}
+          RaidItem=json.dumps(RaidItem)
+          return  RaidItem
+
+
+
+switcher = {
+        '-r': raid,
+        '-p': poll,
+        '-ip':itemPoll,
+        '-all':allDiscovery,
+        '-ir':itemRaid,
+
+           }
+
+
+
+
+argument = sys.argv[1]
+func = switcher.get(argument)
+print func()
